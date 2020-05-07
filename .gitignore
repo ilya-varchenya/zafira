@@ -1,16 +1,5 @@
-### Gradle ###
-.gradle
-**/build/
-!gradle/wrapper/gradle-wrapper.jar
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+### Zebrunner runtime mounts ###
+/runtime/
 
 ### IntelliJ IDEA ###
 .idea
@@ -18,21 +7,3 @@
 *.iml
 *.ipr
 /out/
-
-/esdata
-/sources/zafira-ws/phantomjs*
-/sources/client_secret.json
-
-/sources/**/logs/*
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### Container mounts ###
-/pgdata/
-/database/*.bak
-/assets/

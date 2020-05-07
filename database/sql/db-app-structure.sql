@@ -268,55 +268,6 @@ CREATE TRIGGER update_timestamp_jobs
 EXECUTE PROCEDURE update_timestamp();
 
 
-DROP TABLE IF EXISTS views;
-CREATE TABLE IF NOT EXISTS views (
-  id SERIAL,
-  project_id INT NULL,
-  name VARCHAR(255) NOT NULL,
-  modified_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
-  created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
-  PRIMARY KEY (id),
-  FOREIGN KEY (project_id) REFERENCES projects (id)
-    ON DELETE CASCADE
-    ON UPDATE NO ACTION
-);
-CREATE INDEX fk_views_projects1_idx ON views (project_id);
-CREATE UNIQUE INDEX view_name_unique ON views (name);
-CREATE TRIGGER update_timestamp_views
-  BEFORE INSERT OR UPDATE
-  ON views
-  FOR EACH ROW
-EXECUTE PROCEDURE update_timestamp();
-
-
-DROP TABLE IF EXISTS job_views;
-CREATE TABLE IF NOT EXISTS job_views (
-  id SERIAL,
-  job_id INT NOT NULL,
-  view_id INT NOT NULL,
-  env VARCHAR(255) NOT NULL,
-  position INT NOT NULL DEFAULT 0,
-  size INT NOT NULL DEFAULT 1,
-  modified_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
-  created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
-  PRIMARY KEY (id),
-  FOREIGN KEY (job_id) REFERENCES jobs (id)
-    ON DELETE CASCADE
-    ON UPDATE NO ACTION,
-  FOREIGN KEY (view_id) REFERENCES views (id)
-    ON DELETE CASCADE
-    ON UPDATE NO ACTION
-);
-CREATE INDEX fk_job_views_jobs1_idx ON job_views (job_id);
-CREATE INDEX fk_job_views_views1_idx ON job_views (view_id);
-CREATE UNIQUE INDEX job_id_env_unique ON job_views (job_id, env);
-CREATE TRIGGER update_timestamp_job_views
-  BEFORE INSERT OR UPDATE
-  ON job_views
-  FOR EACH ROW
-EXECUTE PROCEDURE update_timestamp();
-
-
 DROP TABLE IF EXISTS test_configs;
 CREATE TABLE IF NOT EXISTS test_configs (
   id SERIAL,
@@ -363,13 +314,12 @@ CREATE TABLE IF NOT EXISTS test_runs (
   known_issue BOOLEAN NOT NULL DEFAULT FALSE,
   blocker BOOLEAN NOT NULL DEFAULT FALSE,
   env VARCHAR(50) NULL,
-  platform VARCHAR(30) NULL,
   app_version VARCHAR(255) NULL,
   started_at TIMESTAMP NULL,
   elapsed INT NULL,
   eta INT NULL,
   comments TEXT NULL,
-  slack_channels VARCHAR(255) NULL,
+  channels VARCHAR(255) NULL,
   reviewed BOOLEAN NOT NULL DEFAULT FALSE,
   modified_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
   created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
@@ -396,6 +346,20 @@ CREATE TRIGGER update_timestamp_test_runs
   FOR EACH ROW
 EXECUTE PROCEDURE update_timestamp();
 
+DROP TABLE IF EXISTS test_run_artifacts;
+CREATE TABLE IF NOT EXISTS test_run_artifacts (
+id SERIAL,
+name VARCHAR(255) NOT NULL,
+link TEXT NOT NULL,
+expires_at TIMESTAMP NULL,
+test_run_id INT NOT NULL,
+PRIMARY KEY (id),
+FOREIGN KEY (test_run_id) REFERENCES test_runs (id)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION
+);
+CREATE INDEX fk_test_run_artifacts_test_runs_idx ON test_run_artifacts (test_run_id);
+CREATE UNIQUE INDEX name_test_run_id_unique ON test_run_artifacts (name, test_run_id);
 
 DROP TABLE IF EXISTS tests;
 CREATE TABLE IF NOT EXISTS tests (
@@ -621,6 +585,7 @@ CREATE TABLE IF NOT EXISTS dashboards (
   hidden BOOLEAN NOT NULL DEFAULT FALSE,
   position INT NOT NULL DEFAULT 0,
   editable BOOLEAN NOT NULL DEFAULT TRUE,
+  system BOOLEAN NOT NULL DEFAULT FALSE,
   modified_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
   created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
   PRIMARY KEY (id)
@@ -877,13 +842,19 @@ CREATE TABLE IF NOT EXISTS launcher_presets (
     reference VARCHAR(20) NOT NULL,
     params TEXT NULL,
     launcher_id INT NOT NULL,
+    provider_id INT NOT NULL,
     modified_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
     created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
     PRIMARY KEY (id),
     CONSTRAINT fk_LAUNCHER_PRESET_LAUNCHERS1
         FOREIGN KEY (launcher_id)
             REFERENCES LAUNCHERS (id)
-            ON DELETE NO ACTION
+            ON DELETE CASCADE
+            ON UPDATE NO ACTION,
+    CONSTRAINT fk_LAUNCHER_PRESET_INTEGRATIONS1
+        FOREIGN KEY (provider_id)
+            REFERENCES INTEGRATIONS (id)
+            ON DELETE CASCADE
             ON UPDATE NO ACTION);
 CREATE UNIQUE INDEX LAUNCHER_PRESET_LAUNCHER_ID_NAME_UNIQUE ON launcher_presets (name, launcher_id);
 CREATE UNIQUE INDEX LAUNCHER_PRESET_REFERENCE_UNIQUE ON launcher_presets (reference);
@@ -903,11 +874,46 @@ CREATE TABLE IF NOT EXISTS launcher_callbacks (
   CONSTRAINT fk_LAUNCHER_CALLBACK_LAUNCHER_PRESETS1
       FOREIGN KEY (launcher_preset_id)
           REFERENCES LAUNCHER_PRESETS (ID)
-          ON DELETE NO ACTION
+          ON DELETE CASCADE
           ON UPDATE NO ACTION);
 CREATE UNIQUE INDEX LAUNCHER_CALLBACK_CI_RUN_ID_UNIQUE ON launcher_callbacks (ci_run_id);
 CREATE UNIQUE INDEX LAUNCHER_CALLBACK_REFERENCE_UNIQUE ON launcher_callbacks (reference);
 CREATE TRIGGER update_timestamp_launcher_callback BEFORE INSERT OR UPDATE ON launcher_callbacks FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+
+
+CREATE TABLE IF NOT EXISTS user_launcher_preferences (
+    id SERIAL,
+    user_id INT NOT NULL,
+    launcher_id INT NOT NULL,
+    favorite BOOLEAN NULL DEFAULT FALSE,
+    PRIMARY KEY (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE
+        ON UPDATE NO ACTION,
+    FOREIGN KEY (launcher_id) REFERENCES launchers (id)
+        ON DELETE CASCADE
+        ON UPDATE NO ACTION);
+CREATE UNIQUE INDEX USER_LAUNCHER_PREFERENCES_USER_ID_LAUNCHER_ID_UNIQUE ON user_launcher_preferences (user_id, launcher_id);
+
+
+DROP TABLE IF EXISTS test_sessions;
+CREATE TABLE test_sessions (
+   id SERIAL,
+   session_id VARCHAR(255) NOT NULL,
+   version VARCHAR(255) NOT NULL,
+   started_at TIMESTAMP NOT NULL,
+   ended_at TIMESTAMP NULL,
+   duration INT NULL,
+   os_name VARCHAR(255) NOT NULL,
+   browser_name VARCHAR(255) NOT NULL,
+   test_name VARCHAR(255) NULL,
+   build_number VARCHAR(255) NULL,
+   status VARCHAR(20) NOT NULL,
+   modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   PRIMARY KEY (id)
+);
+CREATE TRIGGER update_timestamp_test_sessions BEFORE INSERT OR UPDATE ON test_sessions FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 
 
 CREATE OR REPLACE FUNCTION check_version(INTEGER) RETURNS VOID AS

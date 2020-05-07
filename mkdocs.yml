@@ -5,12 +5,13 @@ pages:
     - Client setup: client_setup.md
     - Lifecycle: lifecycle.md
     - Integrations: integrations.md
-    - Profile: profile.md
+    - User profile: profile.md
     - Dashboards: dashboards.md
     - Test runs: test_runs.md
     - User management: user_management.md
+    - Projects: projects.md
+    - Registration: registration.md
     - Release notes: releases.md
-
 theme:
   name: 'material'
 repo_url: https://github.com/qaprosoft/zafira
