@@ -13,7 +13,6 @@ psql -v ON_ERROR_STOP=1 --username $POSTGRES_USER -f /docker-entrypoint-initdb.d
 psql -v ON_ERROR_STOP=1 --username $POSTGRES_USER -f /docker-entrypoint-initdb.d/sql/db-views-cron.sql
 psql -v ON_ERROR_STOP=1 --username $POSTGRES_USER -f /docker-entrypoint-initdb.d/sql/db-widgets.sql
 
-
 if [ "$ZAFIRA_AMAZON_ENABLED" == true ];
 then
     psql --username $POSTGRES_USER -c "update zafira.integrations set enabled='true' where zafira.integrations.name='AMAZON';"
